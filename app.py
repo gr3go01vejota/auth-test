@@ -38,3 +38,51 @@ class User(db.Model):
 
     def __repr__(self) -> str:
         return f"<User {self.username}>"
+
+
+@app.before_first_request
+def create_table() -> None:
+    """Garante que as tabelas existam antes da primeira requisição"""
+    db.create_all()
+
+
+@app.route("/")
+def home():
+    """Página inicial. Mostra se o usuário está logado ou não."""
+    username = session.get("username")  # pega da sessão (se existir)
+    return render_template("home.html", username=username)
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    """Cadastro de usuário novo.
+    GET -> mostra o formulário
+    POST -> recebe os dados do formulário e cria o usuário
+    """
+    if request.method == "POST":
+        if not username or not email or not password:
+            flash("Preencha todos os campos.", "error")
+            return render_template("register.html")
+        if len(password) < 6:
+            flash("Senha muito curta (mínimo 6 caracteres).", "error")
+            return render_template("register.html")
+
+        # Verifica se já existe usuário ou e-mail igual (restrição de unicidade)
+        exists = User.query.filter(
+            (User.username == username) | (User.email == email)
+        ).first()
+        if exists:
+            flash("Usuário ou e-mail já cadastrado.", "error")
+            return render_template("register.html")
+
+        # Cria e salva o novo usuário (armazenando apenas o hash da senha)
+        user = User(username=username, email=email)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        flash("Cadastro realizado! Faça login.", "success")
+        return redirect(url_for("login"))
+
+    # Se for GET, apenas renderiza o formulário
+    return render_template("register.html")
