@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{% block title %}Auth Flask{% endblock %}</title>
+<link rel="stylesheet" href="https://unpkg.com/modern-css-reset/dist/reset.min.css">
+<style>
+body { font-family: system-ui, Arial, sans-serif; background:#0f172a; color:#e2e8f0; }
+.container { max-width: 420px; margin: 48px auto; padding: 24px; background:#111827; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+h1, h2 { margin: 0 0 16px; }
+a { color: #93c5fd; text-decoration: none; }
+form { display: grid; gap: 12px; }
+label { font-size: .95rem; }
+input { padding: 10px 12px; border-radius: 10px; border: 1px solid #374151; background:#0b1220; color:#e5e7eb; }
+button { padding: 10px 14px; border: 0; border-radius: 10px; background:#3b82f6; color:white; cursor:pointer; }
+.row { display:flex; justify-content: space-between; gap: 12px; }
+.flash { padding:10px 12px; border-radius:8px; margin:8px 0; font-size:.95rem; }
+.flash.error { background:#7f1d1d; color:#fecaca; }
+.flash.success { background:#065f46; color:#a7f3d0; }
+.muted { color:#94a3b8; font-size:.9rem; }
+nav { text-align:center; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="container">
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="flash {{ category }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+
+{% block content %}{% endblock %}
+
+
+<nav class="muted">
+<a href="{{ url_for('home') }}">Home</a> ·
+<a href="{{ url_for('register') }}">Cadastro</a> ·
+<a href="{{ url_for('login') }}">Login</a> ·
+<a href="{{ url_for('logout') }}">Logout</a>
+</nav>
+</div>
+</body>
+</html>
