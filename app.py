@@ -23,10 +23,10 @@ class User(db.Model):
     - check_password: valida uma senha comparando com o hash salvo
     """
 
-    id = db.Collumn(db.Iterger, primary_key=True)  # chave primaria
+    id = db.Column(db.Integer, primary_key=True)  # chave primaria
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullanle=False)
+    password_hash = db.Column(db.String(255), nullable=False)
 
     def set_password(self, password: str) -> None:
         # Gera e armazena o hash da senha fornecida.
@@ -40,10 +40,12 @@ class User(db.Model):
         return f"<User {self.username}>"
 
 
-@app.before_first_request
+@app.before_request
 def create_table() -> None:
     """Garante que as tabelas existam antes da primeira requisição"""
-    db.create_all()
+    if not getattr(app, "_tables_created", False):
+        db.create_all()
+        app._tables_created = True
 
 
 @app.route("/")
@@ -60,6 +62,10 @@ def register():
     POST -> recebe os dados do formulário e cria o usuário
     """
     if request.method == "POST":
+        # Coleta dos campos enviados pelo formulário
+        username = (request.form.get("username") or "").strip()
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password") or ""
         if not username or not email or not password:
             flash("Preencha todos os campos.", "error")
             return render_template("register.html")
@@ -67,7 +73,7 @@ def register():
             flash("Senha muito curta (mínimo 6 caracteres).", "error")
             return render_template("register.html")
 
-        # Verifica se já existe usuário ou e-mail igual (restrição de unicidade)
+        # Verifica se já existe usuário ou e-mail igual
         exists = User.query.filter(
             (User.username == username) | (User.email == email)
         ).first()
@@ -86,3 +92,53 @@ def register():
 
     # Se for GET, apenas renderiza o formulário
     return render_template("register.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """
+    Autenticação.
+    GET  -> mostra o formulário
+    POST -> tenta autenticar pelo usuário OU e-mail + senha
+    """
+    if request.method == "POST":
+        login_id = request.form.get("login_id", "").strip()
+        password = request.form.get("password", "")
+
+        # Tenta localizar por username ou e-mail
+        user = User.query.filter(
+            (User.username == login_id) | (User.email == login_id.lower())
+        ).first()
+
+        # mensagem usuario nao encontrado
+        if not user:
+            flash("Usuário não encontrado.", "error")
+            return render_template("login.html")
+
+        if not user.check_password(password):
+            flash("Usuário ou senha inválidos.", "error")
+            return render_template("login.html")
+
+        # sucesso: grava dados mínimos na sessão
+        session["user_id"] = user.id
+        session["username"] = user.username
+        flash(f"Bem-vindo, {user.username}!", "success")
+        return redirect(url_for("home"))
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    """
+    Finaliza a sessão do usuário atual.
+    """
+    session.clear()  # limpa todos os dados da sessão
+    flash("Sessão encerrada.", "success")
+    return redirect(url_for("login"))
+
+
+# Execução do servidor de desenvolvimento
+if __name__ == "__main__":
+    # debug=True recarrega o servidor automaticamente ao salvar o arquivo
+    app.run(debug=True)
