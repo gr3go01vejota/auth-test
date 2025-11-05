@@ -1,9 +1,11 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///auth.db"
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(basedir, "auth.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = "270fc1771a9c225c98b8d188ebf4710750895dd315adb51a"
 
@@ -23,6 +25,7 @@ class User(db.Model):
     - check_password: valida uma senha comparando com o hash salvo
     """
 
+    __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)  # chave primaria
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -38,14 +41,6 @@ class User(db.Model):
 
     def __repr__(self) -> str:
         return f"<User {self.username}>"
-
-
-@app.before_request
-def create_table() -> None:
-    """Garante que as tabelas existam antes da primeira requisição"""
-    if not getattr(app, "_tables_created", False):
-        db.create_all()
-        app._tables_created = True
 
 
 @app.route("/")
@@ -140,5 +135,8 @@ def logout():
 
 # Execução do servidor de desenvolvimento
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
+        print("DB em:", os.path.join(basedir, "auth.db"))
     # debug=True recarrega o servidor automaticamente ao salvar o arquivo
     app.run(debug=True)
